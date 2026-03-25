@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PROTOCOL">
+<meta name="theme-color" content="#08080c">
+<meta name="description" content="Personal supplement & biohacking command center">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2308080c'/><circle cx='256' cy='256' r='80' fill='none' stroke='%23ff2d55' stroke-width='8'/></svg>">
+<title>PROTOCOL</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08080c;
+    --surface: rgba(255,255,255,0.02);
+    --surface-border: rgba(255,255,255,0.06);
+    --text: #e8e8ec;
+    --text-dim: rgba(255,255,255,0.4);
+    --text-muted: rgba(255,255,255,0.2);
+    --text-ghost: rgba(255,255,255,0.08);
+    --red: #ff2d55;
+    --purple: #bf5af2;
+    --teal: #30d5c8;
+    --green: #32d74b;
+    --yellow: #ffd60a;
+    --blue: #6e6eff;
+    --red-glow: rgba(255,45,85,0.3);
+    --purple-glow: rgba(191,90,242,0.3);
+    --teal-glow: rgba(48,213,200,0.3);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { 
+    background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif;
+    min-height: 100vh; overflow-x: hidden; overscroll-behavior: none;
+  }
+  body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 4px; }
+  
+  /* Animations */
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  @keyframes dotPulse { 0%,80%,100%{transform:scale(0.6);opacity:0.3} 40%{transform:scale(1);opacity:1} }
+  @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  .fade-in { animation: fadeUp 0.5s cubic-bezier(0.4,0,0.2,1) both; }
+  .d1{animation-delay:0.05s} .d2{animation-delay:0.1s} .d3{animation-delay:0.15s}
+  .d4{animation-delay:0.2s} .d5{animation-delay:0.25s} .d6{animation-delay:0.3s}
+  
+  /* Input focus */
+  input:focus, textarea:focus { outline: none; border-color: rgba(255,45,85,0.35) !important; }
+  input::placeholder { color: rgba(255,255,255,0.15); }
+  
+  /* Range slider styling */
+  input[type=range] { -webkit-appearance:none; width:100%; height:4px; border-radius:2px; background:rgba(255,255,255,0.06); cursor:pointer; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; border:none; cursor:pointer; }
+  
+  /* Canvas */
+  #particles { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+  
+  /* Glass card */
+  .glass {
+    background: var(--surface);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border: 1px solid var(--surface-border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  .glass::before {
+    content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  }
+  .glass.hoverable:active { transform: scale(0.985); }
+  
+  /* Mono text */
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .label { font-size:9px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase; }
+  .label-sm { font-size:8px; letter-spacing:1.5px; color:var(--text-muted); text-transform:uppercase; }
+  
+  /* Nav */
+  .nav { display:flex; gap:3px; padding:3px; background:var(--surface); border-radius:12px; border:1px solid rgba(255,255,255,0.04); }
+  .nav-btn {
+    flex:1; padding:8px 4px; background:transparent; border:none; border-radius:9px;
+    color:rgba(255,255,255,0.25); font-size:10px; font-weight:500; cursor:pointer;
+    font-family:'IBM Plex Mono',monospace; transition:all 0.3s;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .nav-btn.active { background:rgba(255,45,85,0.12); color:var(--red); font-weight:700; }
+  .nav-btn .icon { font-size:14px; }
+  .nav-btn-add { flex:0 0 42px; }
+  
+  /* Filter pills */
+  .pill {
+    padding:6px 14px; white-space:nowrap; border-radius:20px; font-size:10px; font-weight:600;
+    cursor:pointer; font-family:'IBM Plex Mono',monospace; letter-spacing:0.5px;
+    transition:all 0.3s; background:transparent; border:1px solid rgba(255,255,255,0.04);
+    color:rgba(255,255,255,0.25);
+  }
+  .pill.active { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.15); color:#fff; }
+  
+  /* Check circle */
+  .check-circle {
+    width:40px; height:40px; border-radius:50%; cursor:pointer; border:2px solid rgba(255,255,255,0.08);
+    background:rgba(255,255,255,0.02); color:transparent; font-size:18px;
+    display:flex; align-items:center; justify-content:center; transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+    flex-shrink:0;
+  }
+  .check-circle.taken { color:inherit; }
+  
+  /* Inputs */
+  .input {
+    width:100%; padding:11px 14px; background:rgba(255,255,255,0.03);
+    border:1px solid var(--surface-border); border-radius:10px;
+    color:var(--text); font-size:13px; font-family:'Outfit',sans-serif; transition:border-color 0.3s;
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    padding:14px; border-radius:12px; border:none; font-size:13px; font-weight:700; cursor:pointer;
+    background:linear-gradient(135deg, var(--red), #bf3050); color:#fff;
+    box-shadow:0 4px 16px var(--red-glow);
+  }
+  .btn-ghost {
+    padding:14px 20px; border-radius:12px; border:1px solid var(--surface-border);
+    background:transparent; color:var(--text-dim); font-size:13px; cursor:pointer;
+  }
+  .btn-danger {
+    padding:14px 24px; border-radius:12px; border:1px solid rgba(255,45,85,0.2);
+    background:rgba(255,45,85,0.08); color:var(--red); font-size:13px; font-weight:600; cursor:pointer;
+  }
+  
+  /* Chat */
+  .chat-msg {
+    max-width:85%; padding:12px 16px; white-space:pre-wrap; font-size:13px; line-height:1.6;
+    animation: fadeUp 0.3s ease both;
+  }
+  .chat-user {
+    border-radius:16px 16px 4px 16px; background:linear-gradient(135deg,var(--red),#bf3050);
+    color:#fff; box-shadow:0 4px 16px var(--red-glow); margin-left:auto;
+  }
+  .chat-ai {
+    border-radius:16px 16px 16px 4px; background:rgba(255,255,255,0.03);
+    border:1px solid var(--surface-border); color:rgba(255,255,255,0.75);
+  }
+  
+  /* Toggle */
+  .toggle {
+    width:40px; height:22px; border-radius:11px; border:none; cursor:pointer;
+    position:relative; transition:background 0.3s;
+  }
+  .toggle .thumb {
+    width:16px; height:16px; border-radius:50%; background:#fff;
+    position:absolute; top:3px; transition:left 0.3s;
+  }
+  
+  /* Overlay */
+  .overlay {
+    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.7); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  }
+  
+  /* Loading */
+  .loader { width:40px; height:40px; border:2px solid transparent; border-top:2px solid var(--red); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 16px; }
+  
+  /* Dot loading */
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--purple); display:inline-block; }
+  .dot:nth-child(1){animation:dotPulse 1.2s 0s infinite} .dot:nth-child(2){animation:dotPulse 1.2s 0.2s infinite} .dot:nth-child(3){animation:dotPulse 1.2s 0.4s infinite}
+
+  /* Supplement tag */
+  .sup-tag {
+    background:rgba(255,255,255,0.04); padding:2px 8px; border-radius:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px;
+  }
+
+  /* Timeline dot */
+  .timeline-dot {
+    position:absolute; left:-22px; top:8px; width:10px; height:10px;
+    border-radius:50%; border:2px solid var(--bg);
+  }
+
+  /* Sparkline area */
+  .spark-area { opacity: 0.15; }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div id="app" style="position:relative;z-index:10;min-height:100vh;"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// PROTOCOL PWA — Vanilla JS (no React dependency)
+// ══════════════════════════════════════════════════════════
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ─── State ─────────────────────────────────────────────
+const DEFAULTS = [
+  { id:"1", name:"Creatine Monohydrate", dose:"7g", timing:"Morning", category:"Performance", notes:"Daily, mixed with water. Saturate muscle phosphocreatine.", active:true, cost:0.15, remaining:60, fasted:true },
+  { id:"2", name:"KSM-66 Ashwagandha", dose:"600mg", timing:"Morning", category:"Adaptogen", notes:"Standardized withanolide. Cycle 8wk on / 2wk off.", active:true, cost:0.45, remaining:45, fasted:true },
+  { id:"3", name:"Lion's Mane", dose:"1000mg", timing:"Morning", category:"Nootropic", notes:"Fruiting body. NGF support.", active:true, cost:0.55, remaining:30, fasted:true },
+  { id:"4", name:"NAC", dose:"600mg", timing:"Morning", category:"Antioxidant", notes:"N-Acetyl Cysteine. Avoid near training window.", active:true, cost:0.20, remaining:90, fasted:true },
+  { id:"5", name:"Omega-3 Fish Oil", dose:"2g", timing:"With meal", category:"Essential", notes:"High EPA/DHA. Take with fat-containing meal.", active:true, cost:0.35, remaining:50, fasted:false },
+  { id:"6", name:"Vitamin D3 + K2", dose:"5000 IU / 100mcg", timing:"With meal", category:"Essential", notes:"Fat-soluble — always with food.", active:true, cost:0.25, remaining:80, fasted:false },
+  { id:"7", name:"L-Theanine", dose:"200mg", timing:"As needed", category:"Nootropic", notes:"Stack with caffeine or use pre-sleep.", active:true, cost:0.12, remaining:100, fasted:true },
+];
+
+const CATEGORIES = ["All","Performance","Adaptogen","Nootropic","Antioxidant","Essential"];
+const TIMINGS = ["Morning","Afternoon","Evening","With meal","Pre-workout","Post-workout","As needed"];
+const CAT = {
+  Performance:{accent:"#ff2d55",glow:"rgba(255,45,85,0.3)"},
+  Adaptogen:{accent:"#30d5c8",glow:"rgba(48,213,200,0.3)"},
+  Nootropic:{accent:"#bf5af2",glow:"rgba(191,90,242,0.3)"},
+  Antioxidant:{accent:"#ffd60a",glow:"rgba(255,214,10,0.3)"},
+  Essential:{accent:"#32d74b",glow:"rgba(50,215,75,0.3)"},
+};
+const BIOS = [
+  {key:"sleep",label:"Sleep",icon:"🌙",color:"#6e6eff"},
+  {key:"energy",label:"Energy",icon:"⚡",color:"#ffd60a"},
+  {key:"mood",label:"Mood",icon:"🧠",color:"#30d5c8"},
+  {key:"focus",label:"Focus",icon:"🎯",color:"#bf5af2"},
+  {key:"performance",label:"Gym",icon:"🏋️",color:"#ff2d55"},
+];
+
+function loadJSON(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function saveJSON(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+let state = {
+  supplements: loadJSON("p-supps", DEFAULTS),
+  log: loadJSON("p-log", {}),
+  chat: loadJSON("p-chat", []),
+  bio: loadJSON("p-bio", {}),
+  view: "command",
+  filter: "All",
+  chatInput: "",
+  chatLoading: false,
+  editId: null,
+  form: { name:"", dose:"", timing:"Morning", category:"Performance", notes:"", cost:"", remaining:"", fasted:true },
+  showBioModal: false,
+  bioEntry: { sleep:5, energy:5, mood:5, focus:5, performance:5 },
+};
+
+function persist() {
+  saveJSON("p-supps", state.supplements);
+  saveJSON("p-log", state.log);
+  saveJSON("p-chat", state.chat);
+  saveJSON("p-bio", state.bio);
+}
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function isTaken(id) { return state.log[todayStr()]?.[id] || false; }
+function toggleTaken(id) {
+  const d = todayStr();
+  if (!state.log[d]) state.log[d] = {};
+  state.log[d][id] = !state.log[d][id];
+  persist(); render();
+}
+function getStreak(id) {
+  let s=0, d=new Date();
+  if (!state.log[d.toISOString().slice(0,10)]?.[id]) return 0;
+  while(state.log[d.toISOString().slice(0,10)]?.[id]){s++;d.setDate(d.getDate()-1);}
+  return s;
+}
+function activeSupps() { return state.supplements.filter(s=>s.active); }
+function takenToday() { return activeSupps().filter(s=>isTaken(s.id)).length; }
+function totalActive() { return activeSupps().length; }
+function pctToday() { const t=totalActive(); return t>0?Math.round(takenToday()/t*100):0; }
+
+function getLast7(fn) {
+  const arr=[];
+  for(let i=6;i>=0;i--){ const d=new Date();d.setDate(d.getDate()-i); arr.push(fn(d.toISOString().slice(0,10))); }
+  return arr;
+}
+function adherence7() { return getLast7(k=>{ const e=state.log[k]; if(!e)return 0; const t=totalActive(); return t>0?Math.round(Object.values(e).filter(Boolean).length/t*100):0; }); }
+function bioHistory(key) { return getLast7(k=>state.bio[k]?.[key]||0); }
+
+// ─── Particles ─────────────────────────────────────────
+function initParticles() {
+  const c = document.getElementById('particles');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let w, h;
+  function resize() { w=c.width=c.offsetWidth*2; h=c.height=c.offsetHeight*2; ctx.scale(2,2); }
+  resize();
+  const ps = Array.from({length:50},()=>({
+    x:Math.random()*w/2, y:Math.random()*h/2,
+    vx:(Math.random()-0.5)*0.25, vy:(Math.random()-0.5)*0.25,
+    r:Math.random()*1.2+0.4, a:Math.random()*0.35+0.08,
+    hue:Math.random()>0.5?340:170
+  }));
+  function draw(){
+    ctx.clearRect(0,0,w/2,h/2);
+    ps.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>w/2)p.vx*=-1;
+      if(p.y<0||p.y>h/2)p.vy*=-1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},80%,65%,${p.a})`; ctx.fill();
+    });
+    for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){
+      const dx=ps[i].x-ps[j].x,dy=ps[i].y-ps[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<90){ctx.beginPath();ctx.moveTo(ps[i].x,ps[i].y);ctx.lineTo(ps[j].x,ps[j].y);ctx.strokeStyle=`rgba(255,255,255,${0.035*(1-d/90)})`;ctx.lineWidth=0.5;ctx.stroke();}
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ─── SVG Helpers ───────────────────────────────────────
+function svgGauge(val, max, size, color, label, sub) {
+  const pct = max>0?val/max:0;
+  const r = (size-14)/2;
+  const circ = 2*Math.PI*r;
+  const off = circ*(1-pct);
+  return `<div style="text-align:center">
+    <svg width="${size}" height="${size}" style="transform:rotate(-90deg)">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="6"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"
+        stroke-dasharray="${circ}" stroke-dashoffset="${off}"
+        style="transition:stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1);filter:drop-shadow(0 0 6px ${color}66)"/>
+    </svg>
+    <div style="margin-top:${-size/2-14}px;height:${size/2+14}px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+      <div style="font-size:${size/4}px;font-weight:800;color:#fff">${val}</div>
+      ${sub?`<div class="label-sm" style="margin-top:2px">${sub}</div>`:''}
+    </div>
+    ${label?`<div class="label-sm" style="margin-top:4px">${label}</div>`:''}
+  </div>`;
+}
+
+function svgSparkline(data, color, w=80, h=24) {
+  if(!data||data.length<2) return '';
+  const max=Math.max(...data,1), min=Math.min(...data,0), range=max-min||1;
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-min)/range)*h}`).join(' ');
+  const lastX=(data.length-1)/(data.length-1)*w;
+  const lastY=h-((data[data.length-1]-min)/range)*h;
+  // Area fill
+  const areaPoints = pts + ` ${w},${h} 0,${h}`;
+  return `<svg width="${w}" height="${h}" style="overflow:visible">
+    <polygon points="${areaPoints}" fill="${color}" class="spark-area"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 3px ${color}44)"/>
+    <circle cx="${lastX}" cy="${lastY}" r="2.5" fill="${color}" style="filter:drop-shadow(0 0 4px ${color})"/>
+  </svg>`;
+}
+
+// ─── Render ────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  const td = todayStr();
+  const pct = pctToday();
+  const taken = takenToday();
+  const total = totalActive();
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const a7 = adherence7();
+  const avgA = Math.round(a7.reduce((a,b)=>a+b,0)/7);
+  const spend = activeSupps().reduce((s,x)=>s+(x.cost||0)*30,0);
+  const low = state.supplements.filter(s=>s.active&&s.remaining>0&&s.remaining<=10);
+  const todayBio = state.bio[td];
+  const bestStreak = Math.max(...state.supplements.filter(s=>s.active).map(s=>getStreak(s.id)),0);
+  const filtered = state.supplements.filter(s=>state.filter==="All"||s.category===state.filter);
+
+  // Timing windows
+  const windows = [
+    {label:"FASTED AM",time:"6:00–8:00",items:activeSupps().filter(s=>s.fasted&&s.timing==="Morning"),color:"#bf5af2"},
+    {label:"WITH MEAL",time:"12:00–13:00",items:activeSupps().filter(s=>s.timing==="With meal"),color:"#32d74b"},
+    {label:"PRE-WORKOUT",time:"15:00–16:00",items:activeSupps().filter(s=>s.timing==="Pre-workout"),color:"#ff2d55"},
+    {label:"POST-WORKOUT",time:"17:00–18:00",items:activeSupps().filter(s=>s.timing==="Post-workout"),color:"#ffd60a"},
+    {label:"EVENING",time:"20:00–21:00",items:activeSupps().filter(s=>s.timing==="Evening"||s.timing==="As needed"),color:"#6e6eff"},
+  ].filter(w=>w.items.length>0);
+
+  const dayLabels = ["S","M","T","W","T","F","S"];
+
+  let html = '';
+
+  // ═══ HEADER ═══
+  html += `<div style="padding:20px 24px 0">
+    <div class="fade-in" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 12px var(--red),0 0 24px var(--red-glow);animation:pulse 2s infinite"></div>
+          <h1 style="font-size:26px;font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,var(--red) 0%,var(--purple) 40%,var(--teal) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent">PROTOCOL</h1>
+        </div>
+        <p class="label" style="margin:2px 0 0 18px;letter-spacing:3px">BIOHACKING COMMAND CENTER</p>
+      </div>
+      <div style="text-align:right">
+        <div id="live-clock" class="mono" style="font-size:22px;font-weight:300;color:rgba(255,255,255,0.6);letter-spacing:2px">${timeStr}</div>
+        <div class="label-sm" style="margin-top:2px;letter-spacing:1.5px">${td}</div>
+      </div>
+    </div>`;
+
+  // ═══ NAV ═══
+  const navs = [{k:"command",l:"Command",i:"◉"},{k:"stack",l:"Stack",i:"⬡"},{k:"timing",l:"Timing",i:"◷"},{k:"bio",l:"Bio",i:"♡"},{k:"chat",l:"Claude",i:"◈"},{k:"add",l:"+",i:"+"}];
+  html += `<div class="nav" style="margin-top:16px">`;
+  navs.forEach(n=>{
+    html+=`<button class="nav-btn ${state.view===n.k?'active':''} ${n.k==='add'?'nav-btn-add':''}" onclick="nav('${n.k}')">
+      <span class="icon">${n.i}</span><span>${n.l}</span>
+    </button>`;
+  });
+  html += `</div></div>`;
+
+  // ═══ CONTENT ═══
+  html += `<div style="padding:16px 20px 120px">`;
+
+  // ══════════ COMMAND CENTER ══════════
+  if (state.view === "command") {
+    // Gauges
+    html += `<div class="fade-in d1" style="display:flex;justify-content:space-around;padding:10px 0">
+      ${svgGauge(taken,total,96,"var(--red)","Today",`of ${total}`)}
+      ${svgGauge(avgA,100,96,"var(--purple)","7d Avg","%")}
+      ${svgGauge(bestStreak,30,96,"var(--teal)","Best Streak","days")}
+    </div>`;
+
+    // Progress bar
+    html += `<div class="glass fade-in d2" style="padding:16px 20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="label" style="letter-spacing:2px">Daily Progress</span>
+        <span style="font-size:24px;font-weight:800;color:${pct===100?'var(--green)':'var(--red)'}">${pct}%</span>
+      </div>
+      <div style="height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;border-radius:2px;transition:width 1s;
+          background:${pct===100?'linear-gradient(90deg,var(--green),#72efdd)':'linear-gradient(90deg,var(--red),var(--purple),var(--teal))'};
+          box-shadow:${pct===100?'0 0 12px rgba(50,215,75,0.5)':'0 0 12px var(--red-glow)'}"></div>
+      </div>
+    </div>`;
+
+    // 7-day bars
+    html += `<div class="glass fade-in d3">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="label" style="letter-spacing:2px">7-Day Adherence</div>
+          <div style="display:flex;gap:6px;margin-top:8px">`;
+    a7.forEach((v,i)=>{
+      const dayIdx = (now.getDay()-6+i+7)%7;
+      html+=`<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="width:24px;height:40px;background:rgba(255,255,255,0.03);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden">
+          <div style="width:100%;height:${v}%;background:${v===100?'var(--green)':v>50?'linear-gradient(180deg,var(--purple),var(--red))':'var(--red)'};border-radius:4px 4px 0 0;transition:height 0.8s ${i*0.05}s"></div>
+        </div>
+        <span class="label-sm">${dayLabels[dayIdx]}</span>
+      </div>`;
+    });
+    html+=`</div></div>
+        <div>${svgSparkline(a7,"var(--purple)",100,32)}</div>
+      </div>
+    </div>`;
+
+    // Biomarkers
+    html += `<div class="glass fade-in d4">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="label" style="letter-spacing:2px">BIOMARKERS</span>
+        ${!todayBio?`<button onclick="openBioModal()" style="background:rgba(255,45,85,0.12);border:1px solid rgba(255,45,85,0.2);border-radius:8px;padding:4px 12px;color:var(--red);font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer">LOG TODAY</button>`
+        :`<span class="label-sm">LOGGED ✓</span>`}
+      </div>
+      <div style="display:flex;justify-content:space-between">`;
+    BIOS.forEach(b=>{
+      const hist = bioHistory(b.key);
+      html+=`<div style="text-align:center;flex:1">
+        <div style="font-size:16px">${b.icon}</div>
+        <div style="margin:4px 0">${svgSparkline(hist,b.color,40,18)}</div>
+        <div style="font-size:16px;font-weight:700;color:${todayBio?b.color:'var(--text-ghost)'}">${todayBio?.[b.key]||'—'}</div>
+        <div class="label-sm" style="margin-top:2px">${b.label}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+
+    // Cost + Alerts
+    html += `<div style="display:flex;gap:12px" class="fade-in d5">
+      <div class="glass" style="flex:1;padding:16px">
+        <div class="label" style="letter-spacing:2px">MONTHLY BURN</div>
+        <div style="font-size:28px;font-weight:800;margin-top:4px">
+          <span style="color:var(--yellow)">$${spend.toFixed(0)}</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:4px">/mo</span>
+        </div>
+      </div>
+      <div class="glass" style="flex:1;padding:16px;${low.length?'border-color:rgba(255,45,85,0.15)':''}">
+        <div class="label" style="letter-spacing:2px">LOW STOCK</div>
+        ${low.length?low.map(s=>`<div style="font-size:11px;color:var(--red);margin-top:4px">⚠ ${s.name} — ${s.remaining} left</div>`).join('')
+        :`<div style="font-size:22px;font-weight:800;color:var(--green);margin-top:4px">ALL GOOD</div>`}
+      </div>
+    </div>`;
+  }
+
+  // ══════════ STACK VIEW ══════════
+  if (state.view === "stack") {
+    html += `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:4px">`;
+    CATEGORIES.forEach(cat=>{
+      const c = cat!=="All"?CAT[cat]:null;
+      const active = state.filter===cat;
+      html+=`<button class="pill ${active?'active':''}" onclick="setFilter('${cat}')" style="${active&&c?`background:${c.accent}18;border-color:${c.accent}44;color:${c.accent};box-shadow:0 0 12px ${c.accent}22`:''}">${cat}</button>`;
+    });
+    html += `</div><div style="display:flex;flex-direction:column;gap:8px">`;
+
+    filtered.forEach((s,i)=>{
+      const c = CAT[s.category]||CAT.Essential;
+      const taken = isTaken(s.id);
+      const streak = getStreak(s.id);
+      html+=`<div class="fade-in d${Math.min(i+1,6)}">
+        <div class="glass hoverable" style="padding:16px 18px;opacity:${s.active?1:0.35};${taken?`border-color:${c.accent}33;background:${c.accent}08`:''}">
+          ${taken?`<div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${c.accent},${c.accent}88);border-radius:16px 16px 0 0"></div>`:''}
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:15px;font-weight:700;color:${taken?c.accent:'#ccc'};transition:color 0.3s">${s.name}</span>
+                ${streak>1?`<span style="font-size:9px;background:${c.accent}15;color:${c.accent};padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;font-weight:600;border:1px solid ${c.accent}22">${streak}d 🔥</span>`:''}
+              </div>
+              <div style="font-size:11px;color:var(--text-dim);margin-top:5px;font-family:'IBM Plex Mono',monospace;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <span class="sup-tag">${s.dose}</span>
+                <span>${s.timing}</span>
+                ${s.fasted?`<span style="color:rgba(50,215,75,0.5);font-size:9px">● fasting-safe</span>`:''}
+              </div>
+              ${s.notes?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">${s.notes}</div>`:''}
+              ${s.remaining>0&&s.remaining<=10?`<div style="font-size:9px;color:var(--red);margin-top:4px;font-family:'IBM Plex Mono',monospace">⚠ ${s.remaining} servings left</div>`:''}
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;margin-left:12px;flex-shrink:0">
+              <button onclick="startEdit('${s.id}')" style="background:none;border:none;color:rgba(255,255,255,0.15);cursor:pointer;font-size:14px;padding:4px">✎</button>
+              <div class="check-circle ${taken?'taken':''}" onclick="${s.active?`toggleTaken('${s.id}')`:''}"
+                style="${taken?`border-color:${c.accent};background:${c.accent}22;color:${c.accent};box-shadow:0 0 16px ${c.accent}33,inset 0 0 8px ${c.accent}11`:''}">${taken?'✓':''}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ══════════ TIMING VIEW ══════════
+  if (state.view === "timing") {
+    html += `<div class="label" style="margin-bottom:12px;letter-spacing:2px">OPTIMAL DOSING WINDOWS</div>`;
+    html += `<div style="position:relative;padding-left:28px">
+      <div style="position:absolute;left:12px;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.06)"></div>`;
+    windows.forEach((w,i)=>{
+      html+=`<div class="fade-in d${Math.min(i+1,6)}" style="margin-bottom:16px;position:relative">
+        <div class="timeline-dot" style="background:${w.color};box-shadow:0 0 10px ${w.color}66"></div>
+        <div class="glass" style="padding:14px 18px;margin-left:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span class="mono" style="font-size:11px;font-weight:700;color:${w.color};letter-spacing:1.5px">${w.label}</span>
+            <span class="mono" style="font-size:10px;color:var(--text-muted)">${w.time}</span>
+          </div>`;
+      w.items.forEach(s=>{
+        const t = isTaken(s.id);
+        html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,0.03)">
+          <div>
+            <span style="font-size:13px;font-weight:600;color:${t?w.color:'rgba(255,255,255,0.6)'}">${s.name}</span>
+            <span class="mono" style="font-size:10px;color:var(--text-muted);margin-left:8px">${s.dose}</span>
+          </div>
+          <div class="check-circle ${t?'taken':''}" onclick="toggleTaken('${s.id}')" style="width:28px;height:28px;font-size:13px;${t?`border-color:${w.color};background:${w.color}22;color:${w.color}`:''}">${t?'✓':''}</div>
+        </div>`;
+      });
+      html+=`</div></div>`;
+    });
+    html += `</div>`;
+
+    // IF note
+    html += `<div class="glass fade-in d5" style="margin-top:8px;padding:16px;border-color:rgba(191,90,242,0.1)">
+      <div class="mono" style="font-size:10px;letter-spacing:2px;color:var(--purple);margin-bottom:8px">IF PROTOCOL NOTE</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6">
+        <strong style="color:rgba(255,255,255,0.6)">Fasting-safe:</strong> ${activeSupps().filter(s=>s.fasted).map(s=>s.name).join(', ')||'None'}
+      </div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:4px">
+        <strong style="color:rgba(255,255,255,0.6)">Require food:</strong> ${activeSupps().filter(s=>!s.fasted).map(s=>s.name).join(', ')||'None'}
+      </div>
+    </div>`;
+  }
+
+  // ══════════ BIOMARKERS VIEW ══════════
+  if (state.view === "bio") {
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="label" style="letter-spacing:2px">BIOMARKER TRACKING</div>
+      ${!todayBio?`<button onclick="openBioModal()" style="background:rgba(255,45,85,0.12);border:1px solid rgba(255,45,85,0.2);border-radius:8px;padding:6px 14px;color:var(--red);font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;font-weight:600">+ LOG TODAY</button>`:''}
+    </div>`;
+    
+    BIOS.forEach((b,i)=>{
+      const hist = bioHistory(b.key);
+      const latest = todayBio?.[b.key];
+      const avg = hist.filter(v=>v>0);
+      const avgVal = avg.length>0?(avg.reduce((a,c)=>a+c,0)/avg.length).toFixed(1):'—';
+      html+=`<div class="glass fade-in d${Math.min(i+1,6)}" style="padding:16px 18px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">${b.icon}</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:${b.color}">${b.label}</div>
+              <div class="label-sm" style="margin-top:2px">7d avg: ${avgVal}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px">
+            ${svgSparkline(hist,b.color,90,28)}
+            <div style="font-size:28px;font-weight:800;color:${latest?b.color:'var(--text-ghost)'};min-width:28px;text-align:right">${latest||'—'}</div>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    // Adherence log
+    html += `<div class="label" style="margin:20px 0 12px;letter-spacing:2px">ADHERENCE HISTORY</div>`;
+    const logEntries = Object.entries(state.log).sort(([a],[b])=>b.localeCompare(a)).slice(0,10);
+    logEntries.forEach(([date,entries])=>{
+      const t = Object.values(entries).filter(Boolean).length;
+      const tot = totalActive();
+      const p = tot>0?Math.round(t/tot*100):0;
+      html+=`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03)">
+        <span class="mono" style="font-size:10px;color:${date===td?'var(--red)':'var(--text-muted)'};width:72px;flex-shrink:0">${date===td?'TODAY':date.slice(5)}</span>
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${p}%;background:${p===100?'var(--green)':'linear-gradient(90deg,var(--red),var(--purple))'};border-radius:2px"></div>
+        </div>
+        <span class="mono" style="font-size:11px;color:${p===100?'var(--green)':p>50?'var(--yellow)':'var(--red)'};width:32px;text-align:right;font-weight:600">${p}%</span>
+      </div>`;
+    });
+  }
+
+  // ══════════ CHAT VIEW ══════════
+  if (state.view === "chat") {
+    html += `<div style="display:flex;flex-direction:column;height:calc(100vh - 200px)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)"></div>
+          <span class="label" style="letter-spacing:2px">CLAUDE ONLINE</span>
+        </div>
+        ${state.chat.length?`<button onclick="clearChat()" style="background:none;border:1px solid var(--surface-border);border-radius:6px;color:var(--text-muted);font-size:9px;padding:3px 10px;cursor:pointer;font-family:'IBM Plex Mono',monospace">CLEAR</button>`:''}
+      </div>
+      <div id="chatScroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:12px">`;
+
+    if (!state.chat.length) {
+      html+=`<div style="text-align:center;padding:48px 20px">
+        <div style="font-size:40px;margin-bottom:16px;filter:drop-shadow(0 0 20px var(--purple-glow))">◈</div>
+        <p style="color:var(--text-muted);font-size:13px;line-height:1.6;max-width:300px;margin:0 auto">Your protocol advisor. Full context on your stack, adherence, and biomarkers.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:20px">`;
+      ["Interaction check","Optimize timing","Should I cycle?","Cost optimization","What am I missing?","Stack for sleep"].forEach(q=>{
+        html+=`<button onclick="setChatInput('${q.replace(/'/g,"\\'")}')" style="background:rgba(255,255,255,0.03);border:1px solid var(--surface-border);border-radius:20px;color:rgba(255,255,255,0.35);font-size:10px;padding:6px 14px;cursor:pointer;font-family:inherit">${q}</button>`;
+      });
+      html+=`</div></div>`;
+    }
+
+    state.chat.forEach(msg=>{
+      html+=`<div style="display:flex;justify-content:${msg.role==='user'?'flex-end':'flex-start'}">
+        <div class="chat-msg ${msg.role==='user'?'chat-user':'chat-ai'}">${escapeHtml(msg.content)}</div>
+      </div>`;
+    });
+
+    if (state.chatLoading) {
+      html+=`<div style="display:flex;justify-content:flex-start">
+        <div class="chat-ai" style="padding:12px 16px;border-radius:16px 16px 16px 4px">
+          <span class="dot"></span> <span class="dot"></span> <span class="dot"></span>
+        </div>
+      </div>`;
+    }
+
+    html+=`<div id="chatEnd"></div></div>
+      <div style="display:flex;gap:8px;padding:12px 0 0;border-top:1px solid rgba(255,255,255,0.04)">
+        <input id="chatInput" class="input" value="${escapeAttr(state.chatInput)}" oninput="state.chatInput=this.value" onkeydown="if(event.key==='Enter'&&!event.shiftKey)sendChat()" placeholder="Ask about your protocol..." style="flex:1">
+        <button onclick="sendChat()" ${state.chatLoading||!state.chatInput.trim()?'disabled':''} style="padding:12px 20px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:${state.chatInput.trim()?'pointer':'default'};transition:all 0.3s;
+          background:${state.chatInput.trim()?'linear-gradient(135deg,var(--red),#bf3050)':'rgba(255,255,255,0.03)'};
+          color:${state.chatInput.trim()?'#fff':'rgba(255,255,255,0.15)'};
+          box-shadow:${state.chatInput.trim()?'0 4px 16px var(--red-glow)':'none'}">→</button>
+      </div>
+    </div>`;
+  }
+
+  // ══════════ ADD / EDIT VIEW ══════════
+  if (state.view === "add") {
+    const f = state.form;
+    html += `<div class="fade-in">
+      <div class="label" style="margin-bottom:16px;letter-spacing:2px">${state.editId?'MODIFY COMPOUND':'ADD TO PROTOCOL'}</div>
+      <div style="display:flex;flex-direction:column;gap:14px">`;
+
+    [{k:"name",l:"Compound Name",p:"e.g. Magnesium L-Threonate"},{k:"dose",l:"Dosage",p:"e.g. 200mg"},{k:"notes",l:"Notes",p:"Mechanism, sourcing, stacking notes..."}].forEach(fd=>{
+      html+=`<div>
+        <label class="label" style="display:block;margin-bottom:6px;letter-spacing:1.5px">${fd.l}</label>
+        <input class="input" value="${escapeAttr(f[fd.k])}" oninput="state.form.${fd.k}=this.value" placeholder="${fd.p}">
+      </div>`;
+    });
+
+    html+=`<div style="display:flex;gap:12px">
+      <div style="flex:1"><label class="label" style="display:block;margin-bottom:6px">$/SERVING</label>
+        <input class="input" value="${escapeAttr(f.cost)}" oninput="state.form.cost=this.value" placeholder="0.25"></div>
+      <div style="flex:1"><label class="label" style="display:block;margin-bottom:6px">SERVINGS LEFT</label>
+        <input class="input" value="${escapeAttr(f.remaining)}" oninput="state.form.remaining=this.value" placeholder="60"></div>
+    </div>`;
+
+    html+=`<div><label class="label" style="display:block;margin-bottom:6px">TIMING</label><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    TIMINGS.forEach(t=>{
+      const a=f.timing===t;
+      html+=`<button class="pill ${a?'active':''}" onclick="state.form.timing='${t}';render()" style="${a?'background:rgba(255,45,85,0.12);border-color:rgba(255,45,85,0.3);color:var(--red)':''}">${t}</button>`;
+    });
+    html+=`</div></div>`;
+
+    html+=`<div><label class="label" style="display:block;margin-bottom:6px">CATEGORY</label><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    CATEGORIES.filter(c=>c!=="All").forEach(cat=>{
+      const c=CAT[cat]; const a=f.category===cat;
+      html+=`<button class="pill ${a?'active':''}" onclick="state.form.category='${cat}';render()" style="${a?`background:${c.accent}15;border-color:${c.accent}44;color:${c.accent};box-shadow:0 0 8px ${c.accent}22`:''}">${cat}</button>`;
+    });
+    html+=`</div></div>`;
+
+    html+=`<div style="display:flex;align-items:center;gap:10px">
+      <button class="toggle" onclick="state.form.fasted=!state.form.fasted;render()" style="background:${f.fasted?'var(--green)':'rgba(255,255,255,0.1)'}">
+        <div class="thumb" style="left:${f.fasted?'21px':'3px'}"></div>
+      </button>
+      <span class="mono" style="font-size:11px;color:var(--text-dim)">Fasting-safe</span>
+    </div>`;
+
+    html+=`<div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-primary" onclick="addOrUpdate()" style="flex:1">${state.editId?'Update Compound':'Add to Protocol'}</button>
+      ${state.editId?`<button class="btn-danger" onclick="deleteSup()">Delete</button>`:''}
+    </div>`;
+
+    html+=`</div></div>`;
+  }
+
+  html += `</div>`; // end content
+
+  // ═══ BIO MODAL ═══
+  if (state.showBioModal) {
+    html += `<div class="overlay">
+      <div class="glass" style="width:90%;max-width:380px;padding:28px 24px;border-color:rgba(255,255,255,0.08)">
+        <div class="label" style="margin-bottom:20px;letter-spacing:2px">LOG BIOMARKERS — ${td}</div>`;
+    BIOS.forEach(b=>{
+      html+=`<div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;color:${b.color};font-weight:600">${b.icon} ${b.label}</span>
+          <span class="mono" style="font-size:18px;font-weight:800;color:${b.color}">${state.bioEntry[b.key]}</span>
+        </div>
+        <input type="range" min="1" max="10" value="${state.bioEntry[b.key]}" oninput="state.bioEntry.${b.key}=+this.value;document.getElementById('bv_${b.key}').textContent=this.value" style="accent-color:${b.color}">
+        <span id="bv_${b.key}" style="display:none">${state.bioEntry[b.key]}</span>
+      </div>`;
+    });
+    html+=`<div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn-primary" onclick="saveBio()" style="flex:1">Save</button>
+        <button class="btn-ghost" onclick="closeBioModal()">Cancel</button>
+      </div>
+      </div>
+    </div>`;
+  }
+
+  app.innerHTML = html;
+
+  // Auto-scroll chat
+  if (state.view === "chat") {
+    const el = document.getElementById('chatEnd');
+    if (el) el.scrollIntoView({behavior:'smooth'});
+  }
+}
+
+// ─── Helper fns ────────────────────────────────────────
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>'); }
+function escapeAttr(s) { return String(s||'').replace(/"/g,'&quot;'); }
+
+// ─── Global actions ────────────────────────────────────
+window.nav = function(v) {
+  state.view = v;
+  if (v === 'add') { state.editId=null; state.form={name:'',dose:'',timing:'Morning',category:'Performance',notes:'',cost:'',remaining:'',fasted:true}; }
+  render();
+};
+window.setFilter = function(f) { state.filter=f; render(); };
+window.toggleTaken = toggleTaken;
+window.startEdit = function(id) {
+  const s = state.supplements.find(x=>x.id===id);
+  if (!s) return;
+  state.form = {name:s.name,dose:s.dose,timing:s.timing,category:s.category,notes:s.notes,cost:s.cost?.toString()||'',remaining:s.remaining?.toString()||'',fasted:s.fasted!==false};
+  state.editId = id;
+  state.view = 'add';
+  render();
+};
+window.addOrUpdate = function() {
+  const f = state.form;
+  if (!f.name||!f.dose) return;
+  const entry = {...f, cost:parseFloat(f.cost)||0, remaining:parseInt(f.remaining)||0};
+  if (state.editId) {
+    state.supplements = state.supplements.map(s=>s.id===state.editId?{...s,...entry}:s);
+    state.editId = null;
+  } else {
+    state.supplements.push({...entry, id:Date.now().toString(), active:true});
+  }
+  state.form = {name:'',dose:'',timing:'Morning',category:'Performance',notes:'',cost:'',remaining:'',fasted:true};
+  state.view = 'stack';
+  persist(); render();
+};
+window.deleteSup = function() {
+  if (!state.editId) return;
+  state.supplements = state.supplements.filter(s=>s.id!==state.editId);
+  state.editId = null;
+  state.form = {name:'',dose:'',timing:'Morning',category:'Performance',notes:'',cost:'',remaining:'',fasted:true};
+  state.view = 'stack';
+  persist(); render();
+};
+window.setChatInput = function(q) { state.chatInput = q; render(); const el=document.getElementById('chatInput'); if(el)el.focus(); };
+window.clearChat = function() { state.chat=[]; persist(); render(); };
+window.openBioModal = function() { state.showBioModal=true; render(); };
+window.closeBioModal = function() { state.showBioModal=false; render(); };
+window.saveBio = function() {
+  state.bio[todayStr()] = {...state.bioEntry};
+  state.showBioModal = false;
+  persist(); render();
+};
+
+window.sendChat = async function() {
+  if (!state.chatInput.trim() || state.chatLoading) return;
+  const msg = state.chatInput.trim();
+  state.chat.push({role:'user',content:msg});
+  state.chatInput = '';
+  state.chatLoading = true;
+  persist(); render();
+
+  const td = todayStr();
+  const stackCtx = activeSupps().map(s=>
+    `• ${s.name} – ${s.dose} (${s.timing}) [${s.category}]${s.fasted?' [fasting-safe]':' [breaks fast]'} ${s.notes?'— '+s.notes:''} | $${s.cost}/serving, ${s.remaining} left`
+  ).join('\n');
+
+  const logCtx = Object.entries(state.log).sort(([a],[b])=>b.localeCompare(a)).slice(0,7).map(([d,e])=>{
+    const names=Object.entries(e).filter(([,v])=>v).map(([id])=>state.supplements.find(s=>s.id===id)?.name||id);
+    return `${d}: ${names.join(', ')||'none'}`;
+  }).join('\n');
+
+  const bioCtx = Object.entries(state.bio).sort(([a],[b])=>b.localeCompare(a)).slice(0,7).map(([d,b])=>
+    `${d}: Sleep:${b.sleep} Energy:${b.energy} Mood:${b.mood} Focus:${b.focus} Gym:${b.performance}`
+  ).join('\n');
+
+  const sys = `You are Claude, Nash's elite biohacking & supplement advisor in his PROTOCOL dashboard. Full context below.
+
+ACTIVE STACK:
+${stackCtx}
+
+ADHERENCE (7d):
+${logCtx||'No data'}
+
+BIOMARKERS (7d):
+${bioCtx||'No data'}
+
+Today: ${td} | ${takenToday()}/${totalActive()} (${pctToday()}%) | Monthly: $${activeSupps().reduce((s,x)=>s+(x.cost||0)*30,0).toFixed(2)}
+
+Be direct, evidence-based. Nash is advanced — skip basic disclaimers. Reference his specific compounds. Flag interactions, timing optimizations, cycling needs, cost efficiencies. Concise but substantive.`;
+
+  const history = state.chat.slice(-12).map(m=>({role:m.role,content:m.content}));
+
+  try {
+    const res = await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:sys,messages:history})
+    });
+    const data = await res.json();
+    const text = data.content?.map(b=>b.text||'').join('')||'Connection issue.';
+    state.chat.push({role:'assistant',content:text});
+  } catch {
+    state.chat.push({role:'assistant',content:'Network error. Try again.'});
+  }
+  state.chatLoading = false;
+  persist(); render();
+};
+
+// ─── Boot ──────────────────────────────────────────────
+render();
+initParticles();
+
+// Clock update — only touch the clock element, never re-render the whole page
+setInterval(()=>{
+  const el = document.getElementById('live-clock');
+  if (el) el.textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+}, 1000);
+</script>
+</body>
+</html>

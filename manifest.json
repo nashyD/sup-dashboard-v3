@@ -1,0 +1,18 @@
+{
+  "name": "PROTOCOL — Biohacking Command Center",
+  "short_name": "PROTOCOL",
+  "description": "Personal supplement & biohacking dashboard",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#08080c",
+  "theme_color": "#ff2d55",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2308080c'/><circle cx='256' cy='256' r='80' fill='none' stroke='%23ff2d55' stroke-width='8'/><circle cx='256' cy='256' r='140' fill='none' stroke='%23bf5af2' stroke-width='4' opacity='0.5'/><circle cx='256' cy='256' r='200' fill='none' stroke='%2330d5c8' stroke-width='2' opacity='0.3'/><circle cx='256' cy='200' r='12' fill='%23ff2d55'/><circle cx='310' cy='280' r='8' fill='%23bf5af2'/><circle cx='200' cy='290' r='10' fill='%2330d5c8'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
